@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Ciclo — como conectar ao mock</title>
+  <style>
+    @font-face { font-family: Outfit; src: url("../assets/fonts/outfit-400.ttf") format("truetype"); font-weight: 400; }
+    @font-face { font-family: Outfit; src: url("../assets/fonts/outfit-600.ttf") format("truetype"); font-weight: 600; }
+    @font-face { font-family: Outfit; src: url("../assets/fonts/outfit-700.ttf") format("truetype"); font-weight: 700; }
+    @font-face { font-family: Fraunces; src: url("../assets/fonts/fraunces-600.ttf") format("truetype"); font-weight: 600; }
+    @font-face { font-family: Fraunces; src: url("../assets/fonts/fraunces-700.ttf") format("truetype"); font-weight: 700; }
+    :root {
+      --canvas: #f6f3ee;
+      --ink: #1f1e1b;
+      --muted: #6f6c66;
+      --line: #e4ddd2;
+      --accent: #b4573f;
+      --soft: #f4e4dc;
+      --green: #3f6b52;
+      --green-soft: #e4efe7;
+      --sand: #f3ecdf;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: white;
+      color: var(--ink);
+      font-family: Outfit, sans-serif;
+      font-size: 12.5pt;
+      line-height: 1.5;
+    }
+    main { padding: 0; }
+    h1, h2, h3 { font-family: Fraunces, Georgia, serif; font-weight: 600; line-height: 1.15; margin: 0; }
+    h1 { font-size: 34pt; letter-spacing: -0.03em; }
+    h2 { font-size: 18pt; margin-top: 1.4em; page-break-after: avoid; }
+    h3 { font-size: 13.5pt; margin-top: 1em; page-break-after: avoid; }
+    p { margin: 0.55em 0; }
+    ol, ul { margin: 0.4em 0 0.8em; padding-left: 1.2em; }
+    li { margin: 0.28em 0; }
+    code, pre { font-family: "DejaVu Sans Mono", "Liberation Mono", monospace; font-size: 9.5pt; }
+    pre {
+      background: var(--sand);
+      border-radius: 12px;
+      padding: 12px 14px;
+      white-space: pre-wrap;
+      page-break-inside: avoid;
+    }
+    .kicker { color: var(--accent); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 10pt; }
+    .lead { font-size: 14pt; color: var(--muted); max-width: 38em; }
+    .cover {
+      background: var(--canvas);
+      border-radius: 20px;
+      padding: 28px 28px 24px;
+      page-break-after: always;
+    }
+    .mark {
+      width: 54px; height: 54px; border-radius: 16px; background: var(--ink); color: white;
+      display: flex; align-items: center; justify-content: center; font-family: Fraunces, serif; font-size: 22pt;
+    }
+    .meta { margin-top: 28px; color: var(--muted); font-size: 11pt; }
+    table { width: 100%; border-collapse: collapse; margin: 0.6em 0 1em; page-break-inside: avoid; }
+    th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { font-size: 10pt; color: var(--muted); font-weight: 600; }
+    .note { background: var(--green-soft); color: var(--green); border-radius: 12px; padding: 12px 14px; page-break-inside: avoid; }
+    .warn { background: var(--soft); border-radius: 12px; padding: 12px 14px; page-break-inside: avoid; }
+    .step { font-weight: 700; color: var(--accent); }
+    a { color: var(--ink); }
+  </style>
+</head>
+<body>
+<main>
+  <section class="cover">
+    <div class="mark">C</div>
+    <p class="kicker" style="margin-top:28px">Mobile II · Ciclo</p>
+    <h1 style="margin-top:10px">Como conectar<br>o aplicativo ao mock</h1>
+    <p class="lead">Passo a passo para entender o contrato, usar o mock que já vem no app e, quando o professor pedir, apontar o celular para um servidor HTTP de verdade.</p>
+    <p class="meta">Conta de demonstração: lia@ciclo.app · senha 123456<br>Contrato completo: docs/api.md</p>
+  </section>
+
+  <h2>1. Abra o projeto certo</h2>
+  <ol>
+    <li>Abra o Android Studio.</li>
+    <li>Escolha Open e selecione a pasta <code>ciclo</code>, a que contém o arquivo <code>pubspec.yaml</code>. Não abra só a pasta <code>android</code>.</li>
+    <li>Espere o Flutter terminar de baixar os pacotes. Se nada acontecer, abra o terminal do Android Studio nessa pasta e rode <code>flutter pub get</code>.</li>
+    <li>Inicie um emulador ou conecte o celular e aperte Run.</li>
+  </ol>
+  <p>A primeira tela pede e-mail e senha. Entre com <code>lia@ciclo.app</code> e <code>123456</code>. A home abre com cinco hábitos de exemplo. Nada disso precisa de internet: o mock mora dentro do aplicativo.</p>
+
+  <h2>2. As três peças</h2>
+  <p>A tela nunca chama a rede direto. O caminho é sempre este:</p>
+  <ol>
+    <li>A tela pede um dado ao repositório (<code>AuthRepository</code> ou <code>HabitRepository</code>).</li>
+    <li>O repositório monta o request do contrato e entrega a um transporte.</li>
+    <li>O transporte devolve JSON. O repositório vira isso em <code>UserProfile</code> ou <code>Habit</code>. A tela só desenha.</li>
+  </ol>
+  <p>Hoje o transporte é o <code>MockTransport</code>. Ele chama o <code>CicloMockServer</code>, que responde na memória como se o endereço fosse <code>https://mock.ciclo.app/v1</code>. Esse endereço é o nome do contrato. Não existe um site nesse host.</p>
+  <p>A escolha está numa linha de <code>lib/main.dart</code>:</p>
+  <pre>runApp(CicloApp(services: AppServices.mock()));</pre>
+  <p><code>AppServices.mock()</code> cria o servidor, o transporte e os dois repositórios. As telas recebem <code>AppServices</code> e não sabem se a resposta veio da memória ou da rede. Por isso dá para trocar o mock sem reescrever a interface.</p>
+
+  <table>
+    <tr><th>Arquivo</th><th>O que ele faz</th></tr>
+    <tr><td>lib/main.dart</td><td>Liga o app no mock embutido ou no HTTP.</td></tr>
+    <tr><td>lib/app/app_services.dart</td><td>Monta repositórios e transporte.</td></tr>
+    <tr><td>lib/scenes</td><td>Telas. Falam só com repositório e sessão.</td></tr>
+    <tr><td>packages/ciclo_core/lib/src/repositories.dart</td><td>Traduz o contrato para objetos.</td></tr>
+    <tr><td>packages/ciclo_core/lib/src/transport.dart</td><td>Mock em memória e cliente HTTP.</td></tr>
+    <tr><td>packages/ciclo_core/lib/src/mock_server.dart</td><td>Regras: login, validação, sequência.</td></tr>
+    <tr><td>mock/server.mjs</td><td>O mesmo contrato, num processo Node.</td></tr>
+    <tr><td>docs/api.md</td><td>Request, response e erro de cada rota.</td></tr>
+  </table>
+
+  <h2>3. Leia o contrato antes de mudar código</h2>
+  <p>Abra <code>docs/api.md</code> com o projeto do lado. Cada rota tem o JSON que entra, o JSON que sai e o erro. O que a tela mostra de vermelho vem desse erro, não de um texto escrito na mão dentro do botão.</p>
+  <p>Formato de erro, em todas as rotas:</p>
+  <pre>{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Revise os campos destacados.",
+    "fields": { "password": "Informe a senha." }
+  }
+}</pre>
+  <p>Rotas que a interface usa:</p>
+  <table>
+    <tr><th>Método</th><th>Caminho</th><th>Para quê</th></tr>
+    <tr><td>POST</td><td>/auth/login</td><td>Entrar. Devolve token e usuário.</td></tr>
+    <tr><td>POST</td><td>/auth/logout</td><td>Encerrar a sessão.</td></tr>
+    <tr><td>GET</td><td>/habits</td><td>Listar hábitos, meta do dia e usuário.</td></tr>
+    <tr><td>POST</td><td>/habits</td><td>Criar. Resposta 201.</td></tr>
+    <tr><td>PATCH</td><td>/habits/{id}</td><td>Editar título, ícone, cor, frequência.</td></tr>
+    <tr><td>PATCH</td><td>/habits/{id}/completion</td><td>Marcar feito ou pendente.</td></tr>
+    <tr><td>DELETE</td><td>/habits/{id}</td><td>Remover.</td></tr>
+    <tr><td>POST</td><td>/dev/reset</td><td>Só no mock. Restaura os exemplos.</td></tr>
+    <tr><td>GET</td><td>/health</td><td>Diz se o servidor HTTP está no ar.</td></tr>
+  </table>
+  <p>Menos o login e o <code>/health</code>, toda rota exige o header <code>Authorization: Bearer {token}</code>. Sem ele a resposta é 401.</p>
+
+  <h2>4. Acompanhe um login</h2>
+  <ol>
+    <li>Abra <code>lib/scenes/login/login_view.dart</code>. O botão chama <code>model.submit()</code>.</li>
+    <li>O view model chama <code>auth.signIn(email, password)</code>.</li>
+    <li><code>RemoteAuthRepository</code> manda este request:</li>
+  </ol>
+  <pre>POST /auth/login
+Content-Type: application/json
+
+{"email":"lia@ciclo.app","password":"123456"}</pre>
+  <p>O mock responde 200:</p>
+  <pre>{
+  "token": "mock-token-usr_001",
+  "user": {
+    "id": "usr_001",
+    "name": "Lia Martins",
+    "email": "lia@ciclo.app",
+    "initials": "LM",
+    "completedCount": 18
+  }
+}</pre>
+  <p>O app guarda token e usuário no <code>SessionStore</code> e abre a home. A home pede <code>GET /habits</code> com o header <code>Authorization: Bearer mock-token-usr_001</code>.</p>
+  <h3>Erros que dá para ver sem debugger</h3>
+  <ul>
+    <li>Apague a senha e toque em entrar. O mock responde <span class="step">422</span>. O campo fica com a frase de <code>error.fields.password</code>.</li>
+    <li>Troque a senha da Lia para <code>errada</code>. O mock responde <span class="step">401</span> com a mensagem “E-mail ou senha não conferem.”</li>
+    <li>Use outro e-mail, por exemplo <code>ana@escola.com</code>, e uma senha de pelo menos 4 caracteres. O mock cria a sessão.</li>
+  </ul>
+
+  <h2>5. Acompanhe um hábito concluído</h2>
+  <p>O botão de check não soma a sequência na tela. Ele manda:</p>
+  <pre>PATCH /habits/hab_002/completion
+Authorization: Bearer mock-token-usr_001
+
+{
+  "completed": true,
+  "completedAt": "2026-10-30T21:15:00-03:00"
+}</pre>
+  <p>A resposta traz o hábito inteiro, com <code>streak</code> novo, e o usuário com <code>completedCount</code> atualizado. A tela troca o card pelo objeto que voltou. Se amanhã o cálculo da sequência mudar, muda no mock, não em cada widget.</p>
+  <div class="note">A sequência só cresce em dia previsto para aquele hábito. “Caminhar” é segunda, quarta e sexta. Numa terça o check ainda marca o dia, mas a conta de dias seguidos olha só os dias da frequência.</div>
+
+  <h2>6. Suba o mock HTTP</h2>
+  <p>O mock embutido basta para apresentar o app. O passo abaixo é o que conecta num endereço, como o contrato descreve.</p>
+  <ol>
+    <li>Instale o Node.js 18 ou mais novo, se o computador ainda não tiver.</li>
+    <li>Abra um terminal na pasta <code>ciclo</code>.</li>
+    <li>Rode <code>node mock/server.mjs</code> e deixe esse terminal aberto.</li>
+    <li>A última linha diz que o mock escuta em <code>http://localhost:4010/v1</code>.</li>
+    <li>Em outro terminal, prove: <code>curl http://localhost:4010/v1/health</code>. A resposta tem <code>"status": "ok"</code>.</li>
+  </ol>
+  <p>O arquivo <code>mock/ciclo.http</code> repete login, lista, conclusão e criação. No Android Studio dá para executar com o plugin HTTP Client. Para os testes automáticos do contrato: <code>node --test mock/logic.test.mjs</code>.</p>
+  <div class="warn">Toda vez que o servidor liga, as sessões zeram e os hábitos de exemplo voltam. É de propósito. Isso é mock de aula, não um banco.</div>
+
+  <h2>7. Aponte o aplicativo para esse mock</h2>
+  <ol>
+    <li>Pare o app no Android Studio.</li>
+    <li>Abra <code>lib/main.dart</code>.</li>
+    <li>Troque a linha do <code>runApp</code> por uma destas.</li>
+  </ol>
+  <h3>Emulador Android</h3>
+  <p>Dentro do emulador, <code>10.0.2.2</code> é o seu computador.</p>
+  <pre>runApp(CicloApp(
+  services: AppServices.http("http://10.0.2.2:4010/v1"),
+));</pre>
+  <h3>Simulador iOS, ou Chrome</h3>
+  <pre>runApp(CicloApp(
+  services: AppServices.http("http://localhost:4010/v1"),
+));</pre>
+  <h3>Celular físico</h3>
+  <p>O celular e o computador precisam estar no mesmo Wi-Fi. Use o IP da máquina, o que o <code>ipconfig</code> ou o <code>ifconfig</code> mostrar.</p>
+  <pre>runApp(CicloApp(
+  services: AppServices.http("http://192.168.0.10:4010/v1"),
+));</pre>
+  <ol start="4">
+    <li>Rode o app de novo.</li>
+    <li>Abra a aba Perfil. O cartão Conexão deve mostrar <code>HTTP http://...</code> em vez de “Mock embutido”.</li>
+    <li>Entre com <code>lia@ciclo.app</code> / <code>123456</code>. Se a lista aparecer, a tela está falando com o servidor.</li>
+  </ol>
+  <p>Nada nas telas muda. <code>AppServices.http</code> só troca o <code>MockTransport</code> pelo <code>HttpTransport</code>. Repositórios e widgets continuam iguais. O Android já aceita HTTP local (<code>usesCleartextTraffic</code>) e o iOS de desenvolvimento também.</p>
+
+  <h2>8. Confira carregando, erro e vazio</h2>
+  <ul>
+    <li><strong>Carregando.</strong> A home mostra o indicador enquanto <code>GET /habits</code> não volta. No mock HTTP o atraso fica visível.</li>
+    <li><strong>Erro.</strong> No mock embutido, a aba Perfil tem “Simular falha do mock”. A próxima chamada responde 503 e a tela oferece “Tentar de novo”. No HTTP, pare o <code>node</code> e puxe a lista: a mensagem de rede aparece.</li>
+    <li><strong>Vazio.</strong> Apague os hábitos. A lista explica o próximo passo. “Restaurar exemplos” chama <code>POST /dev/reset</code>.</li>
+  </ul>
+  <p>A aba Sistema é o sample app do design system: cores, tipo, botões, campo, card, estado vazio e estado de erro. O tema está documentado em <code>docs/design-system.md</code>.</p>
+
+  <h2>9. O que não fazer</h2>
+  <ul>
+    <li>Não coloque <code>http.get</code> dentro de um widget. A tela fala com o repositório.</li>
+    <li>Não mude um campo do JSON só na tela. Se mudar, mude juntos <code>docs/api.md</code>, <code>CicloMockServer</code> e <code>mock/server.mjs</code>.</li>
+    <li>Não esqueça o token no header. Sem ele o mock responde 401.</li>
+    <li>Não use <code>https://mock.ciclo.app</code> como endereço real. Quem responde é o código em memória ou o <code>localhost:4010</code>.</li>
+  </ul>
+
+  <h2>10. Se algo quebrar</h2>
+  <table>
+    <tr><th>Sintoma</th><th>O que olhar</th></tr>
+    <tr><td>Connection refused</td><td>O terminal do <code>node mock/server.mjs</code> está aberto? A porta é 4010?</td></tr>
+    <tr><td>Lista não carrega no emulador</td><td>Use <code>10.0.2.2</code>, não <code>localhost</code>.</td></tr>
+    <tr><td>Celular não acha o computador</td><td>Mesma rede Wi-Fi e o IP certo. Firewall pode bloquear a porta 4010.</td></tr>
+    <tr><td>Cleartext not permitted</td><td>O manifest do projeto já libera HTTP. Confira se você não reverteu o <code>AndroidManifest.xml</code>.</td></tr>
+    <tr><td>401 em toda lista</td><td>O login não aconteceu nesse servidor. Entre de novo depois de ligar o HTTP. Token de um processo não vale no outro.</td></tr>
+    <tr><td>422 ao criar</td><td>Título vazio, ícone fora do catálogo ou frequência vazia. O campo vermelho diz qual.</td></tr>
+    <tr><td>flutter não é reconhecido</td><td>O plugin Flutter do Android Studio não está instalado, ou o SDK não está no PATH do terminal.</td></tr>
+  </table>
+
+  <h2>11. Checklist da entrega</h2>
+  <ul>
+    <li><code>flutter pub get</code> terminou sem erro e o app abre.</li>
+    <li>Login da Lia mostra a home com hábitos.</li>
+    <li>Dá para concluir, criar, editar e apagar um hábito.</li>
+    <li>A aba Sistema mostra cores, tipo, botões, campo, card, vazio e erro.</li>
+    <li><code>docs/api.md</code> e <code>docs/design-system.md</code> estão no projeto.</li>
+    <li>Você sabe apontar, em <code>lib/main.dart</code>, a linha que liga no mock.</li>
+    <li>Se for mostrar o HTTP ao vivo, o terminal do <code>node mock/server.mjs</code> fica aberto durante a apresentação.</li>
+  </ul>
+  <p>O tema, as telas, o sample do design system e o contrato já estão no projeto. Conectar ao mock, no dia da banca, é trocar uma linha e deixar o servidor ligado.</p>
+</main>
+</body>
+</html>

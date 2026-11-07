@@ -1,0 +1,41 @@
+@base = http://localhost:4010/v1
+@token = mock-token-usr_001
+
+### Saúde do mock
+GET {{base}}/health
+
+### Login da conta demo
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "lia@ciclo.app",
+  "password": "123456"
+}
+
+### Lista
+GET {{base}}/habits
+Authorization: Bearer {{token}}
+
+### Marcar caminhada como feita
+PATCH {{base}}/habits/hab_002/completion
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "completed": true,
+  "completedAt": "2026-10-30T21:15:00-03:00"
+}
+
+### Criar hábito
+POST {{base}}/habits
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Meditar 5 min",
+  "frequency": "Todos os dias",
+  "icon": "meditate",
+  "color": "terracotta",
+  "description": "Só sentar."
+}

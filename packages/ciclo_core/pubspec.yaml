@@ -1,0 +1,10 @@
+name: ciclo_core
+description: Modelos, contrato e mock de API do Ciclo.
+publish_to: "none"
+version: 1.0.0
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  http: ^1.2.2
